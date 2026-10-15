@@ -1,36 +1,32 @@
 
-FROM ubuntu:24.04
-LABEL created_by="Sriram Setti"
+# Stage 1: Build dependencies using Python on Debian
+FROM python:3.13-slim-trixie AS builder
 
-# Prevent interactive prompts during installation
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Set working directory
 WORKDIR /app
 
-# Install Python 3 and pip
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        python3 \
-        python3-pip \
-        python3-venv && \
-    rm -rf /var/lib/apt/lists/*
+# Create a virtual environment
+RUN ln -s /usr/local/bin/python /usr/bin/python && \
+    python -m venv /venv
 
-# Copy dependency file
+# Install Python dependencies
 COPY requirements.txt .
+RUN /venv/bin/pip install --no-cache-dir -r requirements.txt
 
-# Create virtual environment and install dependencies
-RUN python3 -m venv /opt/venv && \
-    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+# Stage 2: Minimal Distroless runtime
+FROM gcr.io/distroless/python3-debian13:latest
 
-# Add virtual environment to PATH
-ENV PATH="/opt/venv/bin:$PATH"
+LABEL created_by="Sriram Setti"
+
+WORKDIR /app
+
+# Copy installed dependencies
+COPY --from=builder /venv /venv
 
 # Copy application
 COPY hello.py .
 
-# Expose application port
+# Application port
 EXPOSE 8021
 
-# Start Python application
-CMD ["python3", "hello.py"]
+# Run Python application
+CMD ["/venv/bin/python", "hello.py"]

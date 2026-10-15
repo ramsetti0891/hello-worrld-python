@@ -10,3 +10,47 @@ COPY hello.py .
 EXPOSE 8021
 
 CMD ["python", "hello.py"]
+
+
+
+
+
+
+
+FROM ubuntu:24.04
+
+FROM gcr.io/distroless/python3-debian13:latest
+LABEL created_by="Sriram Setti"
+
+# Prevent interactive prompts during installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Set working directory
+WORKDIR /app
+
+# Install Python 3 and pip
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        python3-venv && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy dependency file
+COPY requirements.txt .
+
+# Create virtual environment and install dependencies
+RUN python3 -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+
+# Add virtual environment to PATH
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy application
+COPY hello.py .
+
+# Expose application port
+EXPOSE 8021
+
+# Start Python application
+CMD ["python3", "hello.py"]
